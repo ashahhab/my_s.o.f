@@ -1,7 +1,7 @@
 from re import I
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
-from .forms import UserRegistrationForm, UserLoginForm
+from .forms import UserRegistrationForm, UserLoginForm, EditeUserForm
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
@@ -111,7 +111,9 @@ class UserPasswordResetConfirmView(auth_views.PasswordResetConfirmView):
 class UserPasswordResetCompleteView(auth_views.PasswordResetCompleteView):
     template_name = 'account/password_reset_complete.html'
     
-    
+
+# following
+  
 class UserFollowView(LoginRequiredMixin, View):
     def get(self, request, user_id):
         user = User.objects.get(id = user_id)
@@ -122,6 +124,9 @@ class UserFollowView(LoginRequiredMixin, View):
             Relation(from_user = request.user, to_user = user).save()
             messages.success(request, 'you followed this user', 'success')
         return redirect('account:user_profile', user_id)
+
+
+#unfollowing
     
 class UserUnfollowView(LoginRequiredMixin, View):
     def get(self, request, user_id):
@@ -133,3 +138,23 @@ class UserUnfollowView(LoginRequiredMixin, View):
         else:
             messages.error(request, 'you are not following this user', 'danger')
         return redirect('account:user_profile', user_id)
+    
+    
+# edit_profile
+
+class EditUserView(LoginRequiredMixin, View):
+    form_class = EditeUserForm
+    
+    def get(self, request):
+        form = self.form_class(instance=request.user.profile, initial={'email':request.user.email})
+        return render(request, 'account/edit_profile.html', {'form':form})
+
+    def post(self, request):
+        form = self.form_class(request.POST, instance=request.user.profile)
+        if form.is_valid():
+            form.save()
+            request.user.email= form.cleaned_data['email']
+            request.user.save()
+            messages.success(request, 'profile edited successfully', 'success')
+            
+        return redirect('account:user_profile', request.user.id)
